@@ -109,7 +109,7 @@ def run_nikto_on_domains(file1, file2, output_file):
                         print(f"Error occurred while scanning {domain}: {e}")
 
 if __name__ == "__main__":
-    target_host = "nanasushithai.com"
+    target_host = ""
     branch1(target_host)
     time.sleep(20)
     com_domains = []
