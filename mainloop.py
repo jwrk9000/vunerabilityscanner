@@ -2,19 +2,6 @@
 
 
 
-#brain(
-
-
-    #regular checking of specific paths or methods/techniques 
-#orchestration of all of the other functionalities of this program
-#deciding functionality and extent of recon/exploiting
-#will go through domains/targets after another
-#accessing various logs to make overall functionality happen
-#general core functionality branching to specific methods that depend on
-# certain things
-#
-
-#)
 
 
 
