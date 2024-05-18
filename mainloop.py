@@ -115,15 +115,15 @@ def remove_non_numeric_chars(filename):
     with open(filename, 'r') as file:
         for line in file:
             cleaned_line = ''.join(char for char in line if char.isdigit() or char == '.')
-            # Replace consecutive dots with a single semicolon
+            # replace consecutive dots with a single semicolon
             cleaned_line = cleaned_line.replace('..', ';')
-            # Remove consecutive semicolons
+            # remove consecutive semicolons
             cleaned_line = remove_consecutive_semicolons(cleaned_line)
             cleaned_data.append(cleaned_line)
     return cleaned_data
 
 def remove_consecutive_semicolons(line):
-    # Replace consecutive semicolons with a single semicolon
+    # replace consecutive semicolons with a single semicolon
     return ';'.join(filter(None, line.split(';')))
 
 def save_cleaned_data(data, output_filename):
@@ -157,7 +157,7 @@ import socket
 def check_ftp(ip_address, port, output_file):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(5)  # Set a timeout for the connection attempt
+            s.settimeout(5)  # set a timeout for the connection attempt
             s.connect((ip_address, port))
             output_file.write(f"FTP access available on {ip_address}:{port}\n")
     except Exception as e:
@@ -171,7 +171,7 @@ if __name__ == "__main__":
                 if len(parts) >= 2:
                     ip_address = parts[0]
                     port_str = parts[1]
-                    if port_str.isdigit():  # Check if port string contains only digits
+                    if port_str.isdigit():  # check if port string contains only digits
                         port = int(port_str)
                         output_file.write(f"Checking FTP access on {ip_address}:{port}\n")
                         check_ftp(ip_address, port, output_file)
@@ -289,13 +289,13 @@ def main():
             threads.append(t)
             t.start()
 
-            # Limit the number of concurrent threads to avoid overwhelming the system
+            # limit the number of concurrent threads to avoid overwhelming the system
             if len(threads) >= 10:
                 for t in threads:
                     t.join()
                 threads = []
 
-    # Join any remaining threads
+    # join any remaining threads
     for t in threads:
         t.join()
 
