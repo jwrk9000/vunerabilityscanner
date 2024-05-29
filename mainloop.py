@@ -117,7 +117,7 @@ def mainloopportrecon(filename, filename2):
 
 
 if __name__ == "__main__":
-    target_host = "xxxxxxx.com" #<---------------------------------
+    target_host = ".com" #<---------------------------------------------------------------.-.-.-.-.-.-.-.-..-.-......
     branch1(target_host)
     time.sleep(30)
     com_domains = []
@@ -723,7 +723,126 @@ process_domains(domain_files, 'dns_results.txt')
 
 
 
+import subprocess
+import re
 
-#--
-#--#--#--#--#--#--
-#--#--#--#--#--#--
+def run_curl(target, output_file):
+    try:
+        # Run Curl command to perform HTTP request
+        result = subprocess.run(['curl', '-I', '-s', target], capture_output=True, text=True)
+        headers = result.stdout
+
+        result = subprocess.run(['curl', '-s', target], capture_output=True, text=True)
+        body = result.stdout
+
+        # Check for XSS vulnerabilities
+        xss_patterns = ['<script>', 'onmouseover=', 'alert\(', 'javascript:']
+        xss_vulnerabilities = []
+        for pattern in xss_patterns:
+            if re.search(pattern, body, re.IGNORECASE) or re.search(pattern, headers, re.IGNORECASE):
+                xss_vulnerabilities.append(pattern)
+
+        # Check for SQL injection vulnerabilities
+        sql_patterns = ['SQL syntax', 'syntax error', 'mysql_fetch_array', 'mysql_fetch_assoc',
+                        'mysqli_query', 'mysql_query', 'mysql_error', 'mysql_connect']
+        sql_vulnerabilities = []
+        for pattern in sql_patterns:
+            if re.search(pattern, body, re.IGNORECASE) or re.search(pattern, headers, re.IGNORECASE):
+                sql_vulnerabilities.append(pattern)
+
+        # Check for other common vulnerabilities
+        other_vulnerabilities = []
+        if 'phpinfo()' in body or 'phpinfo()' in headers:
+            other_vulnerabilities.append('phpinfo()')
+        if 'eval\(' in body or 'eval\(' in headers:
+            other_vulnerabilities.append('eval()')
+
+        # Write vulnerabilities to file
+        with open(output_file, 'a') as file:
+            file.write(f"\n==== Vulnerabilities found for {target} ====\n")
+            if xss_vulnerabilities:
+                file.write("XSS vulnerabilities found:\n")
+                for xss in xss_vulnerabilities:
+                    file.write(f"- {xss}\n")
+            if sql_vulnerabilities:
+                file.write("SQL injection vulnerabilities found:\n")
+                for sql in sql_vulnerabilities:
+                    file.write(f"- {sql}\n")
+            if other_vulnerabilities:
+                file.write("Other vulnerabilities found:\n")
+                for other in other_vulnerabilities:
+                    file.write(f"- {other}\n")
+            if not xss_vulnerabilities and not sql_vulnerabilities and not other_vulnerabilities:
+                file.write("No vulnerabilities found\n")
+            file.write("==== End of Vulnerabilities ====\n")
+    except Exception as e:
+        print(f"Error running Curl for {target}: {e}")
+
+def process_targets(target_files, output_file):
+    for filename in target_files:
+        try:
+            with open(filename, 'r') as file:
+                for line in file:
+                    target = line.strip()
+                    if target:
+                        run_curl(target, output_file)
+        except Exception as e:
+            print(f"Error reading file {filename}: {e}")
+
+# List of target files
+target_files = ['cleaned_ports.txt', 'scan_results.txt', 'scan_results2.txt']
+
+# Output file
+output_file = 'curl_results.txt'
+
+# Process targets and write results to output file
+process_targets(target_files, output_file)
+
+
+
+
+
+
+
+
+
+
+
+import subprocess
+
+def run_whatweb(domain, output_file):
+    subprocess.run(['whatweb', domain, '-v'], stdout=output_file, stderr=subprocess.DEVNULL)
+
+def process_domains(domain_files, output_file):
+    for filename in domain_files:
+        with open(filename, 'r') as file:
+            for domain in file:
+                domain = domain.strip()
+                if domain:
+                    with open(output_file, 'a') as out:
+                        run_whatweb(domain, out)
+
+# List of domain files
+domain_files = ['scan_results.txt', 'scan_results2.txt']
+
+# Output file
+output_file = 'whatweb_results.txt'
+
+# Process domains and write results to output file
+process_domains(domain_files, output_file)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
